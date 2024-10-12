@@ -90,32 +90,30 @@ const App = () => {
       {showOverlay ? (
         <GridSizeOverlay onSizeSelect={handleSizeSelect} />
       ) : (
-        <>
-          <div className="top-bar">
-            <h1>Pixel Art Maker</h1>
-          </div>
-          <div className="main-content">
-            <div className="sidebar">
-              <h2>Color Palette</h2>
-              <div className="color-picker">
-                <input
-                  type="color"
-                  value={currentColor}
-                  onChange={(e) => handleColorChange(e.target.value)}
-                />
-                <span>Selected: {currentColor}</span>
-              </div>
-              <div className="palette">
-                {palette.map((color, index) => (
-                  <div
-                    key={index}
-                    className={`color-swatch ${color === currentColor ? 'active' : ''}`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setCurrentColor(color)}
-                  />
-                ))}
-              </div>
+        <div className="app-container">
+          <div className="sidebar">
+            <h2>Color Palette</h2>
+            <div className="color-picker">
+              <input
+                type="color"
+                value={currentColor}
+                onChange={(e) => handleColorChange(e.target.value)}
+              />
+              <span>Selected: {currentColor}</span>
             </div>
+            <div className="palette">
+              {palette.map((color, index) => (
+                <div
+                  key={index}
+                  className={`color-swatch ${color === currentColor ? 'active' : ''}`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => setCurrentColor(color)}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="main-area">
+            <h1>Pixel Art Maker</h1>
             <div className="drawing-area">
               <div className="grid-container">
                 <div className="grid" style={{ 
@@ -164,7 +162,7 @@ const App = () => {
               <button onClick={handleChangeSize} className="change-size-btn">Change Grid Size</button>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

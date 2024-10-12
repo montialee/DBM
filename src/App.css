@@ -18,19 +18,7 @@ body, html {
   flex-direction: column;
 }
 
-.top-bar {
-  background-color: #f0f0f0;
-  padding: 10px;
-  text-align: center;
-  border-bottom: 1px solid #ccc;
-}
-
-h1, h2 {
-  color: #333;
-  text-align: center;
-}
-
-.main-content {
+.app-container {
   display: flex;
   flex: 1;
   overflow: hidden;
@@ -44,13 +32,27 @@ h1, h2 {
   overflow-y: auto;
 }
 
-.drawing-area {
+.main-area {
   flex: 1;
-  padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 20px;
   overflow-y: auto;
+}
+
+h1, h2 {
+  color: #333;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.drawing-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
 }
 
 .color-picker {
@@ -88,9 +90,10 @@ h1, h2 {
 }
 
 .grid-container {
-  margin: 20px 0;
   display: flex;
   justify-content: center;
+  align-items: center;
+  margin: 20px 0;
 }
 
 .grid {
@@ -182,7 +185,7 @@ button:hover {
 }
 
 @media (max-width: 768px) {
-  .main-content {
+  .app-container {
     flex-direction: column;
   }
 
@@ -192,7 +195,7 @@ button:hover {
     border-bottom: 1px solid #ccc;
   }
 
-  .drawing-area {
+  .main-area {
     padding: 10px;
   }
 
