@@ -1,23 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Pencil, Eraser, PaintBucket, Trash2 } from 'lucide-react';
+import { Pencil, Eraser, PaintBucket, Trash2, Grid } from 'lucide-react';
 import './App.css';
 
 const GridSizeOverlay = ({ onSizeSelect }) => {
-  const [size, setSize] = useState(16);
-
   return (
     <div className="overlay">
       <div className="overlay-content">
-        <h2>Choose Grid Size</h2>
+        <h2>Scegli la dimensione della griglia</h2>
         <div className="size-selector">
-          <input
-            type="number"
-            min="1"
-            max="32"
-            value={size}
-            onChange={(e) => setSize(parseInt(e.target.value, 10))}
-          />
-          <button onClick={() => onSizeSelect(size)}>Start Drawing</button>
+          <button onClick={() => onSizeSelect(16)}>
+            16x16 - Senza il quadratino del centro
+          </button>
+          <button onClick={() => onSizeSelect(17)}>
+            17x17 - Con il quadratino del centro :)
+          </button>
         </div>
       </div>
     </div>
@@ -30,7 +26,8 @@ const App = () => {
   const [grid, setGrid] = useState([]);
   const [currentColor, setCurrentColor] = useState('#000000');
   const [currentTool, setCurrentTool] = useState('pencil');
-  const [palette, setPalette] = useState(['#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF']);
+  const [palette, setPalette] = useState(['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF']);
+  const [showGridlines, setShowGridlines] = useState(true);
 
   useEffect(() => {
     setGrid(Array(gridSize).fill().map(() => Array(gridSize).fill('#FFFFFF')));
@@ -85,21 +82,25 @@ const App = () => {
     }
   };
 
+  const toggleGridlines = () => {
+    setShowGridlines(!showGridlines);
+  };
+
   return (
-    <div className="pixel-art-maker">
+    <div className="pixel-art-maker dark-theme">
       {showOverlay ? (
         <GridSizeOverlay onSizeSelect={handleSizeSelect} />
       ) : (
         <div className="app-container">
           <div className="sidebar">
-            <h2>Color Palette</h2>
+            <h2>Tavolozza dei colori</h2>
             <div className="color-picker">
               <input
                 type="color"
                 value={currentColor}
                 onChange={(e) => handleColorChange(e.target.value)}
               />
-              <span>Selected: {currentColor}</span>
+              <span>Selezionato: {currentColor}</span>
             </div>
             <div className="palette">
               {palette.map((color, index) => (
@@ -113,13 +114,13 @@ const App = () => {
             </div>
           </div>
           <div className="main-area">
-            <h1>Pixel Art Maker</h1>
+            <h1>Disegnini Molto Belli 2</h1>
             <div className="drawing-area">
               <div className="grid-container">
-                <div className="grid" style={{ 
+                <div className={`grid ${showGridlines ? 'with-gridlines' : ''}`} style={{ 
                   gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-                  width: `${gridSize * 20}px`,
-                  height: `${gridSize * 20}px`
+                  width: `${gridSize * 30}px`,
+                  height: `${gridSize * 30}px`
                 }}>
                   {grid.map((row, rowIndex) => 
                     row.map((cell, colIndex) => (
@@ -137,29 +138,40 @@ const App = () => {
                 <button
                   className={`tool-btn ${currentTool === 'pencil' ? 'active' : ''}`}
                   onClick={() => setCurrentTool('pencil')}
+                  title="Matita"
                 >
                   <Pencil size={24} />
                 </button>
                 <button
                   className={`tool-btn ${currentTool === 'eraser' ? 'active' : ''}`}
                   onClick={() => setCurrentTool('eraser')}
+                  title="Gomma"
                 >
                   <Eraser size={24} />
                 </button>
                 <button
                   className={`tool-btn ${currentTool === 'fill' ? 'active' : ''}`}
                   onClick={() => setCurrentTool('fill')}
+                  title="Riempimento"
                 >
                   <PaintBucket size={24} />
                 </button>
                 <button
                   className="tool-btn"
                   onClick={handleClearCanvas}
+                  title="Cancella tutto"
                 >
                   <Trash2 size={24} />
                 </button>
+                <button
+                  className={`tool-btn ${showGridlines ? 'active' : ''}`}
+                  onClick={toggleGridlines}
+                  title="Mostra/Nascondi griglia"
+                >
+                  <Grid size={24} />
+                </button>
               </div>
-              <button onClick={handleChangeSize} className="change-size-btn">Change Grid Size</button>
+              <button onClick={handleChangeSize} className="change-size-btn">Cambia dimensione griglia</button>
             </div>
           </div>
         </div>
