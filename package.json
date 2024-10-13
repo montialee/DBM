@@ -21,6 +21,7 @@
     "vite": "^5.0.0"
   },
   "dependencies": {
+    "gif.js": "^0.2.0",
     "lucide-react": "^0.452.0",
     "react-color": "^2.19.3"
   }

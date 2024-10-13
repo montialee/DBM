@@ -1,10 +1,10 @@
 import React from 'react';
-import { Play, Pause, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Pause, Plus, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 
-const AnimationSidebar = ({ frames, currentFrame, onAddFrame, onDeleteFrame, onPlayPause, isPlaying, onFrameChange, fps, onFpsChange }) => {
+const AnimationSidebar = ({ frames, currentFrame, onAddFrame, onDeleteFrame, onPlayPause, isPlaying, onFrameChange, fps, onFpsChange, onSaveGif }) => {
   return (
     <div className="animation-sidebar">
-      <h2>Animazione</h2>
+      <h2>Animation</h2>
       <div className="frame-controls">
         <button className="tool-btn add-frame" onClick={onAddFrame} title="Add Frame">
           <Plus size={24} />
@@ -54,6 +54,9 @@ const AnimationSidebar = ({ frames, currentFrame, onAddFrame, onDeleteFrame, onP
           />
         </div>
       </div>
+      <button className="tool-btn save-gif" onClick={onSaveGif} title="Save as GIF">
+        <Download size={24} />
+      </button>
     </div>
   );
 };

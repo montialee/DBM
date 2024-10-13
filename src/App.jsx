@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Pencil, Eraser, PaintBucket, Trash2, Grid, Undo, Redo, Pipette, Plus, Minus, Download } from 'lucide-react';
 import './App.css';
 import AnimationSidebar from './AnimationSidebar.jsx';
+import GIF from 'gif.js';
 
 const GridSizeOverlay = ({ onSizeSelect }) => {
   return (
@@ -58,6 +59,45 @@ const GridSizeOverlay = ({ onSizeSelect }) => {
         setFrames(newFrames);
         setCurrentFrame(Math.min(currentFrame, newFrames.length - 1));
       }
+    };
+
+    // Add the handleSaveGif function here
+    const handleSaveGif = () => {
+      const gif = new GIF({
+        workers: 2,
+        quality: 10,
+        width: gridSize * 25,  // Assuming each cell is 25px
+        height: gridSize * 25,
+      });
+
+      frames.forEach((frame) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = gridSize * 25;
+        canvas.height = gridSize * 25;
+        const ctx = canvas.getContext('2d');
+
+        frame.forEach((row, y) => {
+          row.forEach((color, x) => {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * 25, y * 25, 25, 25);
+          });
+        });
+
+        gif.addFrame(canvas, { delay: 1000 / fps });
+      });
+
+      gif.on('finished', (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'pixel-art-animation.gif';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      });
+
+      gif.render();
     };
 
     const handlePlayPause = () => {
@@ -268,6 +308,8 @@ const GridSizeOverlay = ({ onSizeSelect }) => {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+
+      
     });
   };
 
@@ -420,6 +462,7 @@ const GridSizeOverlay = ({ onSizeSelect }) => {
             onFrameChange={handleFrameChange}
             fps={fps}
             onFpsChange={handleFpsChange}
+            onSaveGif={handleSaveGif}
           />
         </div>
       )}

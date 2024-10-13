@@ -548,6 +548,16 @@ h1, h2 {
   text-overflow: ellipsis;
 }
 
+.animation-sidebar .save-gif {
+  background-color: #3498db;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.animation-sidebar .save-gif:hover {
+  background-color: #2980b9;
+}
+
 @media (max-width: 768px) {
   .app-container {
     flex-direction: column;
