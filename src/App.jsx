@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Pencil, Eraser, PaintBucket, Trash2, Grid, Undo, Redo, Pipette, Plus, Minus } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Pencil, Eraser, PaintBucket, Trash2, Grid, Undo, Redo, Pipette, Plus, Minus, Download } from 'lucide-react';
 import './App.css';
+import AnimationSidebar from './AnimationSidebar.jsx';
 
 const GridSizeOverlay = ({ onSizeSelect }) => {
   return (
@@ -20,33 +21,79 @@ const GridSizeOverlay = ({ onSizeSelect }) => {
   );
 };
 
-const App = () => {
-  const [showOverlay, setShowOverlay] = useState(true);
-  const [gridSize, setGridSize] = useState(16);
-  const [grid, setGrid] = useState([]);
-  const [currentColor, setCurrentColor] = useState('#000000');
-  const [currentTool, setCurrentTool] = useState('pencil');
-  const [palette, setPalette] = useState(['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF']);
-  const [showGridlines, setShowGridlines] = useState(true);
-  const [history, setHistory] = useState([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const [symmetryMode, setSymmetryMode] = useState('none');
-  const [lineStart, setLineStart] = useState(null);
+  const App = () => {
+    const [showOverlay, setShowOverlay] = useState(true);
+    const [gridSize, setGridSize] = useState(16);
+    const [grid, setGrid] = useState([]);
+    const [currentColor, setCurrentColor] = useState('#000000');
+    const [currentTool, setCurrentTool] = useState('pencil');
+    const [palette, setPalette] = useState(['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF']);
+    const [showGridlines, setShowGridlines] = useState(true);
+    const [history, setHistory] = useState([]);
+    const [historyIndex, setHistoryIndex] = useState(-1);
+    const [symmetryMode, setSymmetryMode] = useState('none');
+    const [lineStart, setLineStart] = useState(null);
+    const canvasRef = useRef(null);
+    const [frames, setFrames] = useState([]);
+    const [currentFrame, setCurrentFrame] = useState(0);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [fps, setFps] = useState(5);
 
-  useEffect(() => {
-    const initialGrid = Array(gridSize).fill().map(() => Array(gridSize).fill('#FFFFFF'));
-    setGrid(initialGrid);
-    setHistory([initialGrid]);
-    setHistoryIndex(0);
-  }, [gridSize]);
+    useEffect(() => {
+      const initialGrid = Array(gridSize).fill().map(() => Array(gridSize).fill('#FFFFFF'));
+      setGrid(initialGrid);
+      setHistory([initialGrid]);
+      setHistoryIndex(0);
+      setFrames([initialGrid]); // Initialize frames with the initial grid
+    }, [gridSize]);
 
-  const updateGridWithHistory = useCallback((newGrid) => {
-    setGrid(newGrid);
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(newGrid);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
-  }, [history, historyIndex]);
+    const handleAddFrame = () => {
+      setFrames([...frames, grid]);
+      setCurrentFrame(frames.length);
+    };
+
+    const handleDeleteFrame = (index) => {
+      if (frames.length > 1) {
+        const newFrames = frames.filter((_, i) => i !== index);
+        setFrames(newFrames);
+        setCurrentFrame(Math.min(currentFrame, newFrames.length - 1));
+      }
+    };
+
+    const handlePlayPause = () => {
+      setIsPlaying(!isPlaying);
+    };
+
+    const handleFrameChange = (index) => {
+      setCurrentFrame(index);
+      setGrid(frames[index]);
+    };
+
+    const handleFpsChange = (newFps) => {
+      setFps(newFps);
+    };
+
+    useEffect(() => {
+      let intervalId;
+      if (isPlaying) {
+        intervalId = setInterval(() => {
+          setCurrentFrame((prev) => (prev + 1) % frames.length);
+          setGrid(frames[(currentFrame + 1) % frames.length]);
+        }, 1000 / fps);
+      }
+      return () => clearInterval(intervalId);
+    }, [isPlaying, fps, frames, currentFrame]);
+
+    const updateGridWithHistory = useCallback((newGrid) => {
+      setGrid(newGrid);
+      const newFrames = [...frames];
+      newFrames[currentFrame] = newGrid;
+      setFrames(newFrames);
+      const newHistory = history.slice(0, historyIndex + 1);
+      newHistory.push(newGrid);
+      setHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+    }, [frames, currentFrame, history, historyIndex]);
 
   const handleSizeSelect = (size) => {
     setGridSize(size);
@@ -197,6 +244,33 @@ const App = () => {
     }
   };
 
+  const handleSave = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const cellSize = 25;
+
+    canvas.width = gridSize * cellSize;
+    canvas.height = gridSize * cellSize;
+
+    grid.forEach((row, rowIndex) => {
+      row.forEach((cell, colIndex) => {
+        ctx.fillStyle = cell;
+        ctx.fillRect(colIndex * cellSize, rowIndex * cellSize, cellSize, cellSize);
+      });
+    });
+
+    canvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'pixel-art.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    });
+  };
+
   return (
     <div className="pixel-art-maker dark-theme">
       {showOverlay ? (
@@ -325,12 +399,31 @@ const App = () => {
                 >
                   <Plus size={24} />
                 </button>
+                <button
+                  className="tool-btn"
+                  onClick={handleSave}
+                  title="Salva"
+                >
+                  <Download size={24} />
+                </button>
               </div>
               <button onClick={handleChangeSize} className="change-size-btn">Cambia dimensione griglia</button>
             </div>
           </div>
+          <AnimationSidebar
+            frames={frames}
+            currentFrame={currentFrame}
+            onAddFrame={handleAddFrame}
+            onDeleteFrame={handleDeleteFrame}
+            onPlayPause={handlePlayPause}
+            isPlaying={isPlaying}
+            onFrameChange={handleFrameChange}
+            fps={fps}
+            onFpsChange={handleFpsChange}
+          />
         </div>
       )}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
     </div>
   );
 };
