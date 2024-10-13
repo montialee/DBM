@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Pencil, Eraser, PaintBucket, Trash2, Grid, Undo, Redo, Pipette, Plus, Minus, Download } from 'lucide-react';
 import './App.css';
 import AnimationSidebar from './AnimationSidebar.jsx';
-import GIF from 'gif.js';
+import GIF from 'gif.js/dist/gif';
 
 const GridSizeOverlay = ({ onSizeSelect }) => {
   return (
@@ -62,43 +62,67 @@ const GridSizeOverlay = ({ onSizeSelect }) => {
     };
 
     // Add the handleSaveGif function here
-    const handleSaveGif = () => {
-      const gif = new GIF({
-        workers: 2,
-        quality: 10,
-        width: gridSize * 25,  // Assuming each cell is 25px
-        height: gridSize * 25,
-      });
+    const handleSaveGif = useCallback(() => {
+      console.log('Starting GIF creation...');
+      console.log('Number of frames:', frames.length);
+      console.log('FPS:', fps);
+      console.log('Grid size:', gridSize);
 
-      frames.forEach((frame) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = gridSize * 25;
-        canvas.height = gridSize * 25;
-        const ctx = canvas.getContext('2d');
+      if (frames.length === 0) {
+        console.error('No frames to save!');
+        alert('There are no frames to save. Please create some frames first.');
+        return;
+      }
 
-        frame.forEach((row, y) => {
-          row.forEach((color, x) => {
-            ctx.fillStyle = color;
-            ctx.fillRect(x * 25, y * 25, 25, 25);
-          });
+      try {
+        const gif = new GIF({
+          workerScript: null,  // Disable Web Worker
+          quality: 10,
+          width: gridSize * 25,  // Assuming each cell is 25px
+          height: gridSize * 25,
         });
 
-        gif.addFrame(canvas, { delay: 1000 / fps });
-      });
+        frames.forEach((frame, index) => {
+          console.log(`Processing frame ${index + 1}...`);
+          const canvas = document.createElement('canvas');
+          canvas.width = gridSize * 25;
+          canvas.height = gridSize * 25;
+          const ctx = canvas.getContext('2d');
 
-      gif.on('finished', (blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'pixel-art-animation.gif';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      });
+          frame.forEach((row, y) => {
+            row.forEach((color, x) => {
+              ctx.fillStyle = color;
+              ctx.fillRect(x * 25, y * 25, 25, 25);
+            });
+          });
 
-      gif.render();
-    };
+          gif.addFrame(ctx, { delay: 1000 / fps, copy: true });
+        });
+
+        gif.on('progress', (p) => {
+          console.log(`GIF encoding progress: ${Math.round(p * 100)}%`);
+        });
+
+        gif.on('finished', (blob) => {
+          console.log('GIF creation finished. Initiating download...');
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'pixel-art-animation.gif';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          console.log('GIF download initiated.');
+        });
+
+        console.log('Starting GIF rendering...');
+        gif.render();
+      } catch (error) {
+        console.error('Error creating GIF:', error);
+        alert('An error occurred while creating the GIF. Please check the console for more details.');
+      }
+    }, [frames, fps, gridSize]);
 
     const handlePlayPause = () => {
       setIsPlaying(!isPlaying);
