@@ -54,9 +54,6 @@ const AnimationSidebar = ({ frames, currentFrame, onAddFrame, onDeleteFrame, onP
           />
         </div>
       </div>
-      <button className="tool-btn save-gif" onClick={onSaveGif} title="Save as GIF">
-        <Download size={24} />
-      </button>
     </div>
   );
 };
