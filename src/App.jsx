@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Pencil, Eraser, PaintBucket, Trash2, Grid } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Pencil, Eraser, PaintBucket, Trash2, Grid, Undo, Redo, Pipette, Plus, Minus } from 'lucide-react';
 import './App.css';
 
 const GridSizeOverlay = ({ onSizeSelect }) => {
@@ -28,31 +28,100 @@ const App = () => {
   const [currentTool, setCurrentTool] = useState('pencil');
   const [palette, setPalette] = useState(['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF']);
   const [showGridlines, setShowGridlines] = useState(true);
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [symmetryMode, setSymmetryMode] = useState('none');
+  const [lineStart, setLineStart] = useState(null);
 
   useEffect(() => {
-    setGrid(Array(gridSize).fill().map(() => Array(gridSize).fill('#FFFFFF')));
+    const initialGrid = Array(gridSize).fill().map(() => Array(gridSize).fill('#FFFFFF'));
+    setGrid(initialGrid);
+    setHistory([initialGrid]);
+    setHistoryIndex(0);
   }, [gridSize]);
+
+  const updateGridWithHistory = useCallback((newGrid) => {
+    setGrid(newGrid);
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(newGrid);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  }, [history, historyIndex]);
 
   const handleSizeSelect = (size) => {
     setGridSize(size);
     setShowOverlay(false);
   };
 
-  const handleCellClick = (rowIndex, colIndex) => {
-    const newGrid = [...grid];
+  const applySymmetry = (newGrid, rowIndex, colIndex, color) => {
+    newGrid[rowIndex][colIndex] = color;
 
-    if (currentTool === 'pencil') {
-      newGrid[rowIndex][colIndex] = currentColor;
-    } else if (currentTool === 'eraser') {
-      newGrid[rowIndex][colIndex] = '#FFFFFF';
-    } else if (currentTool === 'fill') {
-      const targetColor = grid[rowIndex][colIndex];
-      if (targetColor !== currentColor) {
-        floodFill(newGrid, rowIndex, colIndex, targetColor, currentColor);
+    if (symmetryMode === 'horizontal' || symmetryMode === 'quad') {
+      newGrid[gridSize - 1 - rowIndex][colIndex] = color;
+    }
+    if (symmetryMode === 'vertical' || symmetryMode === 'quad') {
+      newGrid[rowIndex][gridSize - 1 - colIndex] = color;
+    }
+    if (symmetryMode === 'quad') {
+      newGrid[gridSize - 1 - rowIndex][gridSize - 1 - colIndex] = color;
+    }
+  };
+
+  const handleCellClick = (rowIndex, colIndex) => {
+    if (currentTool === 'line') {
+      if (!lineStart) {
+        setLineStart({ row: rowIndex, col: colIndex });
+      } else {
+        const newGrid = grid.map(row => [...row]);
+        drawLine(newGrid, lineStart.row, lineStart.col, rowIndex, colIndex);
+        setLineStart(null);
+        updateGridWithHistory(newGrid);
+      }
+    } else {
+      const newGrid = grid.map(row => [...row]);
+
+      if (currentTool === 'eyedropper') {
+        setCurrentColor(grid[rowIndex][colIndex]);
+        setCurrentTool('pencil');
+        return;
+      }
+
+      if (currentTool === 'pencil') {
+        applySymmetry(newGrid, rowIndex, colIndex, currentColor);
+      } else if (currentTool === 'eraser') {
+        applySymmetry(newGrid, rowIndex, colIndex, '#FFFFFF');
+      } else if (currentTool === 'fill') {
+        const targetColor = grid[rowIndex][colIndex];
+        if (targetColor !== currentColor) {
+          floodFill(newGrid, rowIndex, colIndex, targetColor, currentColor);
+        }
+      }
+
+      updateGridWithHistory(newGrid);
+    }
+  };
+
+  const drawLine = (grid, x0, y0, x1, y1) => {
+    const dx = Math.abs(x1 - x0);
+    const dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+
+    while (true) {
+      applySymmetry(grid, x0, y0, currentColor);
+
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * err;
+      if (e2 > -dy) {
+        err -= dy;
+        x0 += sx;
+      }
+      if (e2 < dx) {
+        err += dx;
+        y0 += sy;
       }
     }
-
-    setGrid(newGrid);
   };
 
   const floodFill = (grid, row, col, targetColor, replacementColor) => {
@@ -68,7 +137,8 @@ const App = () => {
   };
 
   const handleClearCanvas = () => {
-    setGrid(Array(gridSize).fill().map(() => Array(gridSize).fill('#FFFFFF')));
+    const newGrid = Array(gridSize).fill().map(() => Array(gridSize).fill('#FFFFFF'));
+    updateGridWithHistory(newGrid);
   };
 
   const handleChangeSize = () => {
@@ -77,13 +147,54 @@ const App = () => {
 
   const handleColorChange = (color) => {
     setCurrentColor(color);
-    if (!palette.includes(color)) {
-      setPalette([...palette, color]);
+  };
+
+  const handleSaveColor = () => {
+    if (!palette.includes(currentColor)) {
+      setPalette([...palette, currentColor]);
     }
   };
 
   const toggleGridlines = () => {
     setShowGridlines(!showGridlines);
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      setHistoryIndex(historyIndex - 1);
+      setGrid(history[historyIndex - 1]);
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      setHistoryIndex(historyIndex + 1);
+      setGrid(history[historyIndex + 1]);
+    }
+  };
+
+  const toggleSymmetryMode = () => {
+    const modes = ['none', 'horizontal', 'vertical', 'quad'];
+    const currentIndex = modes.indexOf(symmetryMode);
+    setSymmetryMode(modes[(currentIndex + 1) % modes.length]);
+  };
+
+  const renderSymmetryLines = () => {
+    switch (symmetryMode) {
+      case 'horizontal':
+        return <div className="symmetry-line horizontal" />;
+      case 'vertical':
+        return <div className="symmetry-line vertical" />;
+      case 'quad':
+        return (
+          <>
+            <div className="symmetry-line horizontal" />
+            <div className="symmetry-line vertical" />
+          </>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -93,7 +204,7 @@ const App = () => {
       ) : (
         <div className="app-container">
           <div className="sidebar">
-            <h2>Tavolozza dei colori</h2>
+            <h2>Palette Colori</h2>
             <div className="color-picker">
               <input
                 type="color"
@@ -101,27 +212,33 @@ const App = () => {
                 onChange={(e) => handleColorChange(e.target.value)}
               />
               <span>Selezionato: {currentColor}</span>
+              <button onClick={handleSaveColor} className="save-color-btn">Salva Colore</button>
             </div>
-            <div className="palette">
-              {palette.map((color, index) => (
-                <div
-                  key={index}
-                  className={`color-swatch ${color === currentColor ? 'active' : ''}`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => setCurrentColor(color)}
-                />
-              ))}
+            <div className="saved-colors-box">
+              <div className="palette">
+                {palette.map((color, index) => (
+                  <div
+                    key={index}
+                    className={`color-swatch ${color === currentColor ? 'active' : ''}`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setCurrentColor(color)}
+                  />
+                ))}
+              </div>
             </div>
           </div>
           <div className="main-area">
             <h1>Disegnini Molto Belli 2</h1>
             <div className="drawing-area">
               <div className="grid-container">
-                <div className={`grid ${showGridlines ? 'with-gridlines' : ''}`} style={{ 
-                  gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-                  width: `${gridSize * 30}px`,
-                  height: `${gridSize * 30}px`
-                }}>
+                <div 
+                  className={`grid ${showGridlines ? 'with-gridlines' : ''}`} 
+                  style={{ 
+                    gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+                    width: `${gridSize * 25}px`,
+                    height: `${gridSize * 25}px`
+                  }}
+                >
                   {grid.map((row, rowIndex) => 
                     row.map((cell, colIndex) => (
                       <div
@@ -132,6 +249,7 @@ const App = () => {
                       />
                     ))
                   )}
+                  {renderSymmetryLines()}
                 </div>
               </div>
               <div className="tools">
@@ -157,6 +275,20 @@ const App = () => {
                   <PaintBucket size={24} />
                 </button>
                 <button
+                  className={`tool-btn ${currentTool === 'eyedropper' ? 'active' : ''}`}
+                  onClick={() => setCurrentTool('eyedropper')}
+                  title="Contagocce"
+                >
+                  <Pipette size={24} />
+                </button>
+                <button
+                  className={`tool-btn ${currentTool === 'line' ? 'active' : ''}`}
+                  onClick={() => setCurrentTool('line')}
+                  title="Linea"
+                >
+                  <Minus size={32} />
+                </button>
+                <button
                   className="tool-btn"
                   onClick={handleClearCanvas}
                   title="Cancella tutto"
@@ -169,6 +301,29 @@ const App = () => {
                   title="Mostra/Nascondi griglia"
                 >
                   <Grid size={24} />
+                </button>
+                <button
+                  className="tool-btn"
+                  onClick={handleUndo}
+                  disabled={historyIndex === 0}
+                  title="Annulla"
+                >
+                  <Undo size={24} />
+                </button>
+                <button
+                  className="tool-btn"
+                  onClick={handleRedo}
+                  disabled={historyIndex === history.length - 1}
+                  title="Ripeti"
+                >
+                  <Redo size={24} />
+                </button>
+                <button
+                  className={`tool-btn ${symmetryMode !== 'none' ? 'active' : ''}`}
+                  onClick={toggleSymmetryMode}
+                  title="Simmetria"
+                >
+                  <Plus size={24} />
                 </button>
               </div>
               <button onClick={handleChangeSize} className="change-size-btn">Cambia dimensione griglia</button>
