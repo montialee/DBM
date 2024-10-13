@@ -228,7 +228,7 @@ const App = () => {
             </div>
           </div>
           <div className="main-area">
-            <h1>Disegnini Molto Belli 2</h1>
+            <h1>Disegnini Molto Belli</h1>
             <div className="drawing-area">
               <div className="grid-container">
                 <div 
